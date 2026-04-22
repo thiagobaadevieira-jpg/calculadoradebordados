@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "PricingItem": {
+      "title": "Pricing Item",
+      "description": "An individual material or service used in a product pricing calculation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "unit": { "type": "string", "enum": ["Metro", "Unidade", "Gramas", "Litros"] },
+        "costPrice": { "type": "number" },
+        "quantityUsed": { "type": "number" }
+      },
+      "required": ["id", "name", "unit", "costPrice", "quantityUsed"]
+    },
+    "ProductPricing": {
+      "title": "Product Pricing",
+      "description": "A complete pricing calculation for a specific product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productName": { "type": "string" },
+        "items": { 
+          "type": "array",
+          "items": { "$ref": "PricingItem" }
+        },
+        "profitMargin": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "uid": { "type": "string", "description": "The user ID who created this pricing." }
+      },
+      "required": ["id", "productName", "items", "profitMargin", "createdAt", "uid"]
+    },
+    "Quote": {
+      "title": "Quote",
+      "description": "A quote generated for a client containing multiple products.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "products": {
+          "type": "array",
+          "items": { "$ref": "ProductPricing" }
+        },
+        "createdAt": { "type": "number" },
+        "uid": { "type": "string", "description": "The user ID who created this quote." },
+        "status": { "type": "string", "enum": ["Aguardando", "Pagos", "Em produção", "Finalizado"] }
+      },
+      "required": ["id", "clientName", "clientPhone", "products", "createdAt", "uid", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A registered user of the system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastLogin": { "type": "number" },
+        "role": { "type": "string", "enum": ["admin", "client"] }
+      },
+      "required": ["uid", "email", "lastLogin", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of registered users."
+    },
+    "/products/{productId}": {
+      "schema": "ProductPricing",
+      "description": "Collection of product pricing calculations."
+    },
+    "/quotes/{quoteId}": {
+      "schema": "Quote",
+      "description": "Collection of client quotes."
+    }
+  }
+}

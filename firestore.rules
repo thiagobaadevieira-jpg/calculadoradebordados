@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "thiagobaadevieira@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.size() > 5;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'lastLogin', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.lastLogin is number &&
+             data.role in ['admin', 'client'] &&
+             (!('displayName' in data) || data.displayName == null || data.displayName is string) &&
+             (!('photoURL' in data) || data.photoURL == null || data.photoURL is string);
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                      ((isOwner(userId) && request.resource.data.role == 'client') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                      ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    function isValidProductPricing(data) {
+      return data.keys().hasAll(['id', 'productName', 'items', 'profitMargin', 'createdAt', 'uid']) &&
+             data.id is string &&
+             data.productName is string && data.productName.size() > 0 &&
+             data.items is list &&
+             data.profitMargin is number &&
+             data.createdAt is number &&
+             data.uid is string;
+    }
+
+    function isValidQuote(data) {
+      return data.keys().hasAll(['id', 'clientName', 'clientPhone', 'products', 'createdAt', 'uid', 'status']) &&
+             data.id is string &&
+             data.clientName is string &&
+             data.clientPhone is string &&
+             data.products is list &&
+             data.createdAt is number &&
+             data.uid is string &&
+             data.status in ['Aguardando', 'Pagos', 'Em produção', 'Finalizado'];
+    }
+
+    match /products/{productId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidProductPricing(request.resource.data) && 
+                      (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidProductPricing(request.resource.data) && 
+                      ((resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid) || isAdmin());
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+    }
+
+    match /quotes/{quoteId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidQuote(request.resource.data) && 
+                      (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidQuote(request.resource.data) && 
+                      ((resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid) || isAdmin());
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
